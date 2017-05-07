@@ -21,11 +21,9 @@ class MinhaThread (threading.Thread):
         self.test_labels = []
 
     def run(self):
-    	print('iniciou')
         start_time = time.time()
         self.test_labels = find_labels(self.train_values ,self.train_labels, self.test_values, self.K)
         print("tempo thread --- %s seconds ---" % (time.time() - start_time))
-        print('concluido')
 
 #####################################################################################################
 
@@ -50,6 +48,23 @@ def get_train_values(file_path, divisor = ' '):
 	print("arquivo treino --- %s seconds ---" % (time.time() - start_time))
 	return X, y
 
+def get_some_train_values(file_path, num_lines, divisor = ' '):
+	print('iniciando leitura arquivo')
+	start_time = time.time()
+	X = [] #lista com os valores
+	y = [] #lista com as labels
+	file = open(file_path, 'r')
+	file.readline()
+	for counter in xrange(0, num_lines):
+		line = file.readline()
+		values = line.split(divisor) #divide o arquivo pelo caractere X
+		[float(i) for i in values] #converte valores para float
+		y.append(int(values.pop(len(values) - 1))) #isola o valor referente a label
+		X.append(values)
+	file.close()
+	X = np.array( X, np.float32)
+	print("arquivo treino --- %s seconds ---" % (time.time() - start_time))
+	return X, y
 
 def get_test_values(file_path, divisor = ' '):
 	test_values_arrays= []
@@ -64,6 +79,37 @@ def get_test_values(file_path, divisor = ' '):
 		X.append(values)
 	file.close()
 	cpus = multiprocessing.cpu_count() #descobre numero de processadores
+	print('Threads : ' + str(cpus))
+	ini = 0
+	slice_size = len(X) / cpus
+	end = slice_size
+	x = 0
+	while x < cpus - 1:
+		test_values_arrays.append(X[ini:end])
+		x += 1
+		ini += slice_size
+		end += slice_size
+	test_values_arrays.append(X[ini:])
+	X = []
+	for values in test_values_arrays:
+		X.append(np.array(values, np.float32))
+	return X, y
+
+def get_some_test_values(file_path,num_lines , divisor = ' '):
+	test_values_arrays= []
+	X = []
+	y = []
+	file = open(file_path, 'r')
+	file.readline()
+	for counter in xrange(0, num_lines):
+		line = file.readline()
+		values = line.split(divisor) #divide o arquivo pelo caractere X
+		[float(i) for i in values] #converte valores para float
+		y.append(int(values.pop(len(values) - 1))) #isola o valor referente a label
+		X.append(values)
+	file.close()
+	cpus = multiprocessing.cpu_count() #descobre numero de processadores
+	print('Threads : ' + str(cpus))
 	ini = 0
 	slice_size = len(X) / cpus
 	end = slice_size
@@ -127,13 +173,21 @@ def calc_confusion_matrix(test_labels, labels_finded):
 
 ##################################################################################
 
-train_path = sys.argv[1]
-test_path = sys.argv[2]
-K = int(sys.argv[3])
+if len(sys.argv) == 4:
+	train_path = sys.argv[1]
+	test_path = sys.argv[2]
+	K = int(sys.argv[3])
+	train_values, train_labels = get_train_values(train_path)
+	test_values, test_labels = get_test_values(test_path)
+elif len(sys.argv) == 6:
+	train_path = sys.argv[1]
+	test_path = sys.argv[2]
+	K = int(sys.argv[3])
+	lines_number_train = int(sys.argv[4]) 
+	lines_number_test = int(sys.argv[5])
+	train_values, train_labels = get_some_train_values(train_path, lines_number_train)
+	test_values, test_labels = get_some_test_values(test_path, lines_number_test)
 
-
-train_values, train_labels = get_train_values(train_path)
-test_values, test_labels = get_test_values(test_path)
 main_time = time.time()
 threads = []
 for values in test_values:
@@ -146,8 +200,6 @@ result_labels = []
 for thread in threads:
 	result_labels += thread.test_labels
 
-
-#labels_finded = threads[0].test_labels + threads[1].test_labels# + threads[2].test_labels #+ threads[3].test_labels
 precision = calc_precision(test_labels, result_labels)
 confusion_matrix = calc_confusion_matrix(test_labels, result_labels)
 print('Precision : ' + str(precision))
