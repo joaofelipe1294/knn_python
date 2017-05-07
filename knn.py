@@ -117,14 +117,18 @@ def get_test_values(file_path, divisor = ' '):
 		X.append(np.array(values, np.float32))
 	return X, y
 
-def precision(test_labels, labels_finded):
+def calc_precision(test_labels, labels_finded):
 	corrects = 0
 	for index in xrange(0, len(test_labels)):
 		if test_labels[index] == labels_finded[index]:
 			corrects += 1
 	return float(corrects) / float(len(test_labels))
 
-
+def calc_confusion_matrix(test_labels, labels_finded):
+	confusion_matrix = np.zeros((10,10), np.uint32)
+	for index in xrange(0, len(test_labels)):
+		confusion_matrix[test_labels[index], labels_finded[index]] += 1
+	return confusion_matrix
 
 train_path = sys.argv[1]
 test_path = sys.argv[2]
@@ -187,4 +191,16 @@ labels_finded = [0, 1, 0, 2, 3, 4, 5, 7, 6, 9, 8, 1, 0, 2, 3, 4, 5, 7, 6, 9, 8, 
 
 #print(float(corrects) / float(len(labels_encontradas)))
 
-print('Precision : ' + str(precision(test_labels, labels_finded)))
+#print('Precision : ' + str(precision(test_labels, labels_finded)))
+
+#confusion_matrix = np.zeros((10,10), np.uint32)
+#for index in xrange(0, len(test_labels)):
+#	confusion_matrix[test_labels[index], labels_finded[index]] += 1
+
+confusion_matrix = calc_confusion_matrix(test_labels, labels_finded)
+print(confusion_matrix)
+
+
+#for index in xrange(0, len(test_labels)):
+#	if test_labels[index] == labels_encontradas[index]:
+#		corrects += 1
